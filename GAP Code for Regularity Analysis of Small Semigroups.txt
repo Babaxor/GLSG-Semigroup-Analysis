@@ -1,0 +1,47 @@
+# Load necessary packages
+LoadPackage("semigroups");
+LoadPackage("smallsemi");
+
+# Define the GLSG regularity check function
+IsRegularGLSG := function(S)
+    local elements, multTable, n, i, j, k, NS, NR, NC, Q, Q_values;
+    elements := Elements(S);
+    n := Size(elements);
+    multTable := List(elements, x -> List(elements, y -> Position(elements, x * y)));
+    Q_values := [];
+    
+    # Compute Q(i,j) for regularity check
+    for i in [1..n] do
+        for j in [1..n] do
+            k := multTable[i][j];
+            # Count all factorizations of sk
+            NS := Sum([1..n], p -> Size(Filtered([1..n], q -> multTable[p][q] = k)));
+            # Count NR(si, sk)
+            NR := Size(Filtered([1..n], q -> q<>j and multTable[i][q] = k));
+            # Count NC(sj, sk)
+            NC := Size(Filtered([1..n], p -> p<>i and multTable[p][j] = k));
+            # Calculate Q
+            Q := NS - 2 * NR - 2 * NC;
+            Add(Q_values, Q);
+        od;
+    od;
+    
+    # Check if all Q values are equal
+    return Size(Set(Q_values)) = 1;
+end;
+
+# Main analysis function
+RunGLSGAnalysis := function()
+    local n, allSems, total, regularCount;
+    for n in [1..4] do
+        allSems := AllSmallSemigroups(n);
+        total := Size(allSems);
+        regularCount := Size(Filtered(allSems, IsRegularGLSG));
+        Print("Order ", n, ": ", total, " semigroups, ",
+              regularCount, " with regular GLSGs (",
+              String(100.0 * regularCount / total), "%)\n");
+    od;
+end;
+
+# Execute the analysis
+RunGLSGAnalysis();
