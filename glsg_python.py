@@ -1,53 +1,72 @@
-import networkx as nx
-import matplotlib.pyplot as plt
+ # --- Verification Script for Example 5.6.1 ---
 
+# 1. Definition of the semigroup S from Example~\ref{ex:s_regular_n4}
 S = [
-    [2, 3, 5, 4, 1, 0], # a row
-    [4, 5, 3, 2, 0, 1], # b row
-    [5, 4, 0, 1, 3, 2], # a^2 row
-    [1, 0, 4, 5, 2, 3], # ab row
-    [3, 2, 1, 0, 5, 4], # ba row
-    [0, 1, 2, 3, 4, 5]  # b^2 row
+    [0, 0, 2, 2],
+    [0, 0, 2, 2],
+    [2, 2, 0, 0],
+    [2, 2, 0, 0]
 ]
-elements = ["a", "b", "a^2", "ab", "ba", "b^2"]
-n = len(elements)
 
-print(f"Semigroup Size |S| = {n}")
-if n != 6:
-    print("ERROR: The semigroup does not have the expected 6 elements. Calculation aborted.")
-    exit()
+# 2. Helper function to precompute N_S(k)
+def precompute_NS(semigroup):
+    """Counts the total number of factorizations for each element s_k."""
+    n = len(semigroup)
+    N_S_list = [0] * n 
+    for p in range(n):
+        for q in range(n):
+            k = semigroup[p][q]
+            N_S_list[k] += 1
+    return N_S_list
 
-vertices = [(i, j, S[i][j]) for i in range(n) for j in range(n)]
-n_vertices = len(vertices)
-print(f"Number of vertices: {n_vertices}")
+# 3. Main function to verify regularity based on Theorem 2
+def verify_regularity(semigroup):
+    """Computes Q(i,j) for all vertices and checks for regularity."""
+    n = len(semigroup)
+    
+    # Precompute N_S values
+    N_S_lookup = precompute_NS(semigroup)
+    print(f"Precomputed N_S values (for k=0..{n-1}): {N_S_lookup}")
+    
+    Q_values = []     
+    base_degree = 2 * n - 3
+    
+    # Iterate over all n^2 vertices v = (s_i, s_j, s_k)
+    for i in range(n):
+        for j in range(n):
+            k = semigroup[i][j]
+            NS = N_S_lookup[k]
+            
+            # Compute N_R(s_i, s_k)
+            NR = 0
+            for q_prime in range(n):
+                if q_prime != j and semigroup[i][q_prime] == k:
+                    NR += 1
+            
+            # Compute N_C(s_j, s_k)
+            NC = 0
+            for p_prime in range(n):
+                if p_prime != i and semigroup[p_prime][j] == k:
+                    NC += 1
+            
+            # Compute Q(i,j) as per Theorem 2
+            Q = NS - 2 * NR - 2 * NC
+            Q_values.append(Q)
+            
+    # Final check for regularity
+    is_Q_constant = all(q == Q_values[0] for q in Q_values)
+    
+    if is_Q_constant:
+        print(f"\nResult: Q(i,j) = {Q_values[0]} (constant for all {n*n} vertices).")
+        degree = base_degree + Q_values[0]
+        print(f"Result: Degree = {degree} (constant for all {n*n} vertices).")
+        print("Conclusion: Γ(S) is REGULAR.")
+    else:
+        print(f"\nResult: Q(i,j) is NOT constant. Found values: {set(Q_values)}")
+        print("Conclusion: Γ(S) is NOT REGULAR.")
+    
+    return is_Q_constant
 
-G = nx.Graph()
-G.add_nodes_from(range(n_vertices))
-
-for i in range(n_vertices):
-    for j in range(i + 1, n_vertices):
-        v1 = vertices[i]
-        v2 = vertices[j]
-        common = sum(1 for a, b in zip(v1, v2) if a == b)
-        if common == 1:
-            G.add_edge(i, j)
-
-degrees = sorted(dict(G.degree()).values())
-unique_degrees = set(degrees)
-is_regular_graph = len(unique_degrees) == 1
-
-print("\n--- Regularity Report (S defined by multiplication table) ---")
-print(f"Is Γ(S) a regular graph? {is_regular_graph}")
-if is_regular_graph:
-    print(f"Common degree: {degrees[0]}")
-else:
-    print(f"Degree set: {sorted(list(unique_degrees))}")
-
-print("\nGenerating graph visualization...")
-labels = {i: f"({elements[v[0]]}, {elements[v[1]]}, {elements[v[2]]})"
-          for i, v in enumerate(vertices)}
-plt.figure(figsize=(16, 16))
-pos = nx.spring_layout(G, seed=42)
-nx.draw(G, pos, labels=labels, with_labels=True, node_size=800, font_size=8, node_color="skyblue", edge_color="gray")
-plt.title("Generalized Latin Square Graph Γ(S4)", size=20)
-plt.show()
+# 4. Execute the verification
+print("--- Verifying the semigroup from Example 5.6.1 ---")
+verify_regularity(S)
